@@ -18,6 +18,9 @@
 extern NSString *const GCDAsyncSocketException;
 extern NSString *const GCDAsyncSocketErrorDomain;
 
+extern NSString *const GCDAsyncSocketSSLCipherSuites;
+extern NSString *const GCDAsyncSocketSSLDiffieHellmanParameters;
+
 enum GCDAsyncSocketError
 {
 	GCDAsyncSocketNoError = 0,           // Never used
