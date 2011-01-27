@@ -592,6 +592,18 @@ typedef enum AsyncSocketError AsyncSocketError;
 - (void)startTLS:(NSDictionary *)tlsSettings;
 
 /**
+ * As above, but allows for further flexibility as afforded by the SecureTransport framework. SSL/TLS cipher
+ * suites can be specified (in order of preference) as an NSArray of NSNumber container objects for the short
+ * integers specified in <Security/CipherSuite.h>.
+ *
+ * In the case of cipher suites that use Diffie-Hellman key exchange, the DH parameters can be passed in
+ * OpenSSL DER format. This obviates the need for run-time generation of parameters, which can take upwards
+ * of 30 seconds.
+**/
+const extern CFStringRef kCFStreamPropertySocketSSLContext;
+- (void)startTLS:(NSDictionary *)tlsSettings withCiphers:(NSArray *)ciphers dhParameters:(NSData *)diffieHellmanParameters;
+
+/**
  * For handling readDataToData requests, data is necessarily read from the socket in small increments.
  * The performance can be much improved by allowing AsyncSocket to read larger chunks at a time and
  * store any overflow in a small internal buffer.

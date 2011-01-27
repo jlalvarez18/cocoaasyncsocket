@@ -648,17 +648,31 @@ static void MyCFWriteStreamCallback(CFWriteStreamRef stream, CFStreamEventType t
 {
   @public
 	NSDictionary *tlsSettings;
+	NSArray *cipherSuites;
+	NSData *dhParameters;
 }
 - (id)initWithTLSSettings:(NSDictionary *)settings;
+- (id)initWithTLSSettings:(NSDictionary *)settings withCiphers:(NSArray *)ciphers dhParameters:(NSData *)diffieHellmanParameters;
 @end
 
 @implementation AsyncSpecialPacket
 
 - (id)initWithTLSSettings:(NSDictionary *)settings
 {
+	if((self = [self initWithTLSSettings:settings withCiphers:nil dhParameters:nil]))
+	{
+		tlsSettings = [settings copy];
+	}
+	return self;
+}
+
+- (id)initWithTLSSettings:(NSDictionary *)settings withCiphers:(NSArray *)ciphers dhParameters:(NSData *)diffieHellmanParameters
+{
 	if((self = [super init]))
 	{
 		tlsSettings = [settings copy];
+		cipherSuites = [ciphers copy];
+		dhParameters = [diffieHellmanParameters copy];
 	}
 	return self;
 }
@@ -4104,7 +4118,11 @@ Failed:
 #pragma mark Security
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-- (void)startTLS:(NSDictionary *)tlsSettings
+- (void)startTLS:(NSDictionary *)tlsSettings {
+	[self startTLS:tlsSettings withCiphers:nil dhParameters:nil];
+}
+
+- (void)startTLS:(NSDictionary *)tlsSettings withCiphers:(NSArray *)ciphers dhParameters:(NSData *)diffieHellmanParameters
 {
 #if DEBUG_THREAD_SAFETY
 	[self checkForThreadSafety];
@@ -4123,7 +4141,9 @@ Failed:
         tlsSettings = [NSDictionary dictionary];
     }
 	
-	AsyncSpecialPacket *packet = [[AsyncSpecialPacket alloc] initWithTLSSettings:tlsSettings];
+	AsyncSpecialPacket *packet = [[AsyncSpecialPacket alloc] initWithTLSSettings:tlsSettings 
+																	 withCiphers:ciphers 
+																	dhParameters:diffieHellmanParameters];
 	
 	[theReadQueue addObject:packet];
 	[self scheduleDequeueRead];
@@ -4150,6 +4170,28 @@ Failed:
 														   (CFDictionaryRef)tlsPacket->tlsSettings);
 		BOOL didStartOnWriteStream = CFWriteStreamSetProperty(theWriteStream, kCFStreamPropertySSLSettings,
 															 (CFDictionaryRef)tlsPacket->tlsSettings);
+		
+		SSLContextRef sslContext = NULL;
+		NSData *contextData = (NSData *)CFReadStreamCopyProperty(theReadStream, kCFStreamPropertySocketSSLContext);
+		[contextData getBytes:&sslContext length:sizeof(SSLContextRef)];
+		
+		if (tlsPacket->cipherSuites) {
+			NSUInteger numberCiphers = [tlsPacket->cipherSuites count];
+			SSLCipherSuite ciphers[numberCiphers];
+			
+			for (NSUInteger cipherIndex = 0; cipherIndex < numberCiphers; cipherIndex++)
+			{
+				NSNumber *cipherObject = [tlsPacket->cipherSuites objectAtIndex:cipherIndex];
+				ciphers[cipherIndex] = [cipherObject shortValue];
+			}
+			
+			SSLSetEnabledCiphers(sslContext, ciphers, numberCiphers);
+		}
+		
+		if (tlsPacket->dhParameters)
+		{
+			SSLSetDiffieHellmanParams(sslContext, [tlsPacket->dhParameters bytes], [tlsPacket->dhParameters length]);
+		}
 		
 		if(!didStartOnReadStream || !didStartOnWriteStream)
 		{
