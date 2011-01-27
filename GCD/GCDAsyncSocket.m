@@ -81,6 +81,9 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 NSString *const GCDAsyncSocketException = @"GCDAsyncSocketException";
 NSString *const GCDAsyncSocketErrorDomain = @"GCDAsyncSocketErrorDomain";
 
+NSString *const GCDAsyncSocketSSLCipherSuites = @"";
+NSString *const GCDAsyncSocketSSLDiffieHellmanParameters = @"";
+
 enum GCDAsyncSocketFlags
 {
 	kDidStartDelegate          = 1 <<  0,  // If set, disconnection results in delegate call
@@ -4475,6 +4478,49 @@ enum GCDAsyncSocketConfig
 			[self closeWithError:[self writeTimeoutError]];
 		}
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#pragma mark Progress
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+- (CGFloat)progressOfReadReturningTag:(long *)tag bytesDone:(CFIndex *)done total:(CFIndex *)total
+{
+	// Check to make sure we're actually reading something right now,
+	// and that the read packet isn't an AsyncSpecialPacket (upgrade to TLS).
+	if (!currentRead || ![currentRead isKindOfClass:[GCDAsyncReadPacket class]]) return NAN;
+	
+	// It's only possible to know the progress of our read if we're reading to a certain length.
+	// If we're reading to data, we of course have no idea when the data will arrive.
+	// If we're reading to timeout, then we have no idea when the next chunk of data will arrive.
+	
+	CFIndex d = currentRead->bytesDone;
+	CFIndex t = currentRead->readLength;
+	
+	if (tag != NULL)   *tag = currentRead->tag;
+	if (done != NULL)  *done = d;
+	if (total != NULL) *total = t;
+	
+	if (t > 0.0)
+		return (CGFloat)d / (CGFloat)t;
+	else
+		return 1.0F;
+}
+
+- (CGFloat)progressOfWriteReturningTag:(long *)tag bytesDone:(CFIndex *)done total:(CFIndex *)total
+{
+	// Check to make sure we're actually writing something right now,
+	// and that the write packet isn't an AsyncSpecialPacket (upgrade to TLS).
+	if (!currentWrite || ![currentWrite isKindOfClass:[GCDAsyncWritePacket class]]) return NAN;
+	
+	CFIndex d = currentWrite->bytesDone;
+	CFIndex t = [currentWrite->buffer length];
+	
+	if (tag != NULL)   *tag = currentWrite->tag;
+	if (done != NULL)  *done = d;
+	if (total != NULL) *total = t;
+	
+	return (CGFloat)d / (CGFloat)t;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

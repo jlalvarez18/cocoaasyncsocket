@@ -508,6 +508,15 @@ typedef enum GCDAsyncSocketError GCDAsyncSocketError;
 **/
 - (void)writeData:(NSData *)data withTimeout:(NSTimeInterval)timeout tag:(long)tag;
 
+#pragma mark Progress
+
+/**
+ * Returns progress of current read or write, from 0.0 to 1.0, or NaN if no read/write (use isnan() to check).
+ * "tag", "done" and "total" will be filled in if they aren't NULL.
+ **/
+- (CGFloat)progressOfReadReturningTag:(long *)tag bytesDone:(CFIndex *)done total:(CFIndex *)total;
+- (CGFloat)progressOfWriteReturningTag:(long *)tag bytesDone:(CFIndex *)done total:(CFIndex *)total;
+
 #pragma mark Security
 
 /**
