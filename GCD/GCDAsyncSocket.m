@@ -81,8 +81,10 @@ static const int ddLogLevel = LOG_LEVEL_VERBOSE;
 NSString *const GCDAsyncSocketException = @"GCDAsyncSocketException";
 NSString *const GCDAsyncSocketErrorDomain = @"GCDAsyncSocketErrorDomain";
 
-NSString *const GCDAsyncSocketSSLCipherSuites = @"";
-NSString *const GCDAsyncSocketSSLDiffieHellmanParameters = @"";
+#if !TARGET_OS_IPHONE
+NSString *const GCDAsyncSocketSSLCipherSuites = @"GCDAsyncSocketSSLCipherSuites";
+NSString *const GCDAsyncSocketSSLDiffieHellmanParameters = @"GCDAsyncSocketSSLDiffieHellmanParameters";
+#endif
 
 enum GCDAsyncSocketFlags
 {
